@@ -4,21 +4,59 @@ from telegram.ext import CallbackContext
 from dotenv import load_dotenv
 import os
 import random
-
+from google.cloud import firestore
+from rapidfuzz import fuzz
 
 load_dotenv()
 
-TARGET_WORD = ["louis", "l*uis"]
-count = 676 # manually retrieved from our chat
+TARGET_WORD = "louis"
 
+firebase_key = os.getenv("firebase_key")
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = firebase_key
+db = firestore.Client()
+
+collection = db.collection('count')
+DOCUMENT_ID = "count"
+
+# Set to keep track of counts that have already triggered a message
 set_once = set()
+
+def is_similar(word):
+    similarity = fuzz.ratio(word, TARGET_WORD)
+    print(similarity)
+    if similarity >= 80:  
+        return True
+    return False
+
+def increment_global_count():
+    doc_ref = collection.document(DOCUMENT_ID)
+    doc = doc_ref.get()
+
+    if doc.exists:
+        data = doc.to_dict()
+        new_count = data.get('count', 0) + 1
+
+
+    doc_ref.set({'count': new_count})
+    return new_count
+
+# Optional: retrieve current count
+def get_current_count():
+    doc_ref = collection.document(DOCUMENT_ID)
+    doc = doc_ref.get()
+
+    if doc.exists:
+        return doc.to_dict().get('count', 0)
+    return 0
+
 async def check_message(update: Update, context: CallbackContext):
-    global count
     message = update.message.text.lower()
     hasGacha = False
     for word in message.split():
-        if word in TARGET_WORD:
-            count += 1
+        print(word)
+        if is_similar(word):
+            increment_global_count()
+            count = get_current_count()
             print(f"Count updated to: {count}")
 
             if not hasGacha:
@@ -38,7 +76,6 @@ async def check_message(update: Update, context: CallbackContext):
 
 async def roll_gacha(update, context):
     gacha = random.randint(1, 100)
-    print(gacha)
     if gacha == 1:
         chat_id = update.message.chat_id
         try:
