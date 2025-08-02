@@ -23,7 +23,6 @@ set_once = set()
 
 def is_similar(word):
     similarity = fuzz.ratio(word, TARGET_WORD)
-    print(similarity)
     if similarity >= 80:  
         return True
     return False
@@ -53,7 +52,6 @@ async def check_message(update: Update, context: CallbackContext):
     message = update.message.text.lower()
     hasGacha = False
     for word in message.split():
-        print(word)
         if is_similar(word):
             increment_global_count()
             count = get_current_count()
