@@ -4,6 +4,8 @@ from telegram.ext import CallbackContext
 from dotenv import load_dotenv
 import os
 import random
+import json
+import tempfile
 from google.cloud import firestore
 from rapidfuzz import fuzz
 
@@ -11,8 +13,14 @@ load_dotenv()
 
 TARGET_WORD = "louis"
 
-firebase_key = os.getenv("firebase_key")
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = firebase_key
+firebase_json = os.getenv("FIREBASE_CREDENTIALS")
+
+with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp_file:
+    tmp_file.write(firebase_json.encode())
+    tmp_path = tmp_file.name
+
+# Tell the Firestore SDK where to find credentials
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp_path
 db = firestore.Client()
 
 collection = db.collection('count')
