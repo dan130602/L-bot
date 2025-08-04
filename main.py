@@ -98,6 +98,7 @@ async def main():
 
     application = Application.builder().token(bot_token).build()
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
+    application.add_handler(CommandHandler("count", get_current_count))
 
     await application.initialize()
     await application.start()
