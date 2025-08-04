@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.ext import CallbackContext
 from dotenv import load_dotenv
 import os
@@ -56,6 +56,10 @@ def get_current_count():
         return doc.to_dict().get('count', 0)
     return 0
 
+async def fetch_current_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    count = get_current_count()
+    await update.message.reply_text(f"Current count is {count}")
+
 async def check_message(update: Update, context: CallbackContext):
     message = update.message.text.lower()
     hasGacha = False
@@ -98,7 +102,7 @@ async def main():
 
     application = Application.builder().token(bot_token).build()
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
-    application.add_handler(CommandHandler("count", get_current_count))
+    application.add_handler(CommandHandler("count", fetch_current_count))
 
     await application.initialize()
     await application.start()
