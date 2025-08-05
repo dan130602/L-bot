@@ -82,22 +82,31 @@ async def check_message(update: Update, context: CallbackContext):
                 set_once.add(count)
 
 gacha_collection = db.collection('gacha')
-GACHA_DOCUMENT_ID = "leaderboard"
 
 def increment_leaderboard(update):
-    user_id = update.message.from_user.id
-    name = update.message.from_user.first_name
+    user = update.message.from_user
+    user_id = str(user.id)
+    name = user.first_name
     gacha_doc_ref = gacha_collection.document(user_id)
-    gacha_doc = gacha_doc_ref.get()
+    
+    @firestore.transactional
+    def update_in_transaction(transaction, doc_ref):
+        doc = doc_ref.get(transaction=transaction)
+        
+        if doc.exists:
+            # Increment the count
+            transaction.update(doc_ref, {"count": firestore.Increment(1)})
+            
+            # Check and update the name if it's different
+            if doc.get("name") != name:
+                transaction.update(doc_ref, {"name": name})
+        else:
+            # Create a new document if it doesn't exist
+            new_data = {"count": 1, "name": name}
+            transaction.set(doc_ref, new_data)
 
-    if gacha_doc.exists:
-        gacha_doc_ref.update({"count": firestore.Increment(1)})
-        gacha_user_dict = gacha_doc.to_dict()
-        if gacha_user_dict["name"] != name:
-            gacha_doc_ref.update({"name": name})
-    else:
-        new_data = {"count": 1, "name": name}
-        gacha_doc_ref.set(new_data)
+    transaction = gacha_collection.client.transaction()
+    update_in_transaction(transaction, gacha_doc_ref)
 
 async def fetch_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = gacha_collection.order_by("count", direction=firestore.Query.DESCENDING)
