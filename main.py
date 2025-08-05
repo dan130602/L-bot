@@ -23,8 +23,8 @@ with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp_file:
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp_path
 db = firestore.Client()
 
-collection = db.collection('count')
-DOCUMENT_ID = "count"
+count_collection = db.collection('count')
+COUNT_DOCUMENT_ID = "count"
 
 # Set to keep track of counts that have already triggered a message
 set_once = set()
@@ -36,7 +36,7 @@ def is_similar(word):
     return False
 
 def increment_global_count():
-    doc_ref = collection.document(DOCUMENT_ID)
+    doc_ref = count_collection.document(COUNT_DOCUMENT_ID)
     doc = doc_ref.get()
 
     if doc.exists:
@@ -49,7 +49,7 @@ def increment_global_count():
 
 # Optional: retrieve current count
 def get_current_count():
-    doc_ref = collection.document(DOCUMENT_ID)
+    doc_ref = count_collection.document(COUNT_DOCUMENT_ID)
     doc = doc_ref.get()
 
     if doc.exists:
@@ -84,9 +84,47 @@ async def check_message(update: Update, context: CallbackContext):
 
                 set_once.add(count)
 
+gacha_collection = db.collection('gacha')
+GACHA_DOCUMENT_ID = "leaderboard"
+
+def increment_leaderboard(update):
+    gacha_doc_ref = gacha_collection.document(GACHA_DOCUMENT_ID)
+    gacha_doc = gacha_doc_ref.get()
+
+    if gacha_doc.exists:
+        name = update.message.from_user.first_name
+        gacha_data = gacha_doc.to_dict()
+        if name in gacha_data:
+            gacha_doc_ref.update({name: firestore.Increment(1)})
+        else:
+            gacha_doc_ref.update({name: 1})
+
+def get_leaderboard():
+    gacha_doc_ref = gacha_collection.document(GACHA_DOCUMENT_ID)
+    gacha_doc = gacha_doc_ref.get()
+
+    if gacha_doc.exists:
+        return gacha_doc.to_dict()
+    return {}
+
+async def fetch_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lb = get_leaderboard()
+    if lb == {}:
+        await update.message.reply_text("Unable to fetch leaderboard. Try again later🦞")
+    lb_msg = "**--GACHA LEADERBOARD--**\n"
+    placing = 1
+    for name in lb:
+        lb_msg += f"#{placing}. {name}: {lb[name]}"
+        if placing == 1:
+            lb_msg += "🏆\n"
+        else:
+            lb_msg += "\n"
+        placing += 1
+    await update.message.reply_text(lb_msg.rstrip())
+
 async def roll_gacha(update, context):
     gacha = random.randint(1, 100)
-    if gacha == 1:
+    if gacha >= 1:
         chat_id = update.message.chat_id
         try:
             with open("lobsterThermidor.jpg", 'rb') as photo_file:
@@ -103,6 +141,7 @@ async def main():
     application = Application.builder().token(bot_token).build()
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
     application.add_handler(CommandHandler("count", fetch_current_count))
+    application.add_handler(CommandHandler("lb", fetch_leaderboard))
 
     await application.initialize()
     await application.start()
