@@ -1,7 +1,6 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.ext import CallbackContext
-from telegram.constants import ParseMode
 from dotenv import load_dotenv
 import os
 import random
@@ -109,7 +108,7 @@ async def fetch_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lb = get_leaderboard()
     if lb == {}:
         await update.message.reply_text("Unable to fetch leaderboard. Try again later🦞")
-    lb_msg = "*\\-\\-GACHA LEADERBOARD\\-\\-*\n"
+    lb_msg = "--GACHA LEADERBOARD--\n\n"
     placing = 1
     for name in lb:
         lb_msg += f"#{placing}. {name}: {lb[name]}"
@@ -118,7 +117,7 @@ async def fetch_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             lb_msg += "\n"
         placing += 1
-    await update.message.reply_text(lb_msg.rstrip(), parse_mode=ParseMode.MARKDOWN_V2)
+    await update.message.reply_text(lb_msg.rstrip())
 
 async def roll_gacha(update, context):
     gacha = random.randint(1, 100)
