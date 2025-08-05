@@ -114,11 +114,10 @@ def get_leaderboard():
 
 async def fetch_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lb = get_leaderboard()
-    await update.message.reply_text(lb)
     lb_msg = "--GACHA LEADERBOARD--\n\n"
     placing = 1
-    for person in lb.values():
-        lb_msg += f"#{placing}. {person.name}: {person["count"]}"
+    for uid in lb:
+        lb_msg += f"#{placing}. {lb[uid]["name"]}: {lb[uid]["count"]}"
         if placing == 1:
             lb_msg += " 🏆\n"
         else:
