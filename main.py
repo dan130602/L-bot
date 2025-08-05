@@ -94,8 +94,9 @@ def increment_leaderboard(update):
     if gacha_doc.exists:
         gacha_data = gacha_doc.to_dict()
         if user_id in gacha_data:
-            gacha_doc_ref.update({f"{user_id}.count": firestore.Increment(1)})
-            if gacha_data[user_id].name != name:
+            curr_count = gacha_data[user_id]["count"]
+            gacha_doc_ref.update({f"{user_id}.count": curr_count + 1})
+            if gacha_data[user_id]["name"] != name:
                 gacha_doc_ref.update({f"{user_id}.name": name})
         else:
             gacha_doc_ref.update({f"{user_id}.name": name, f"{user_id}.count": 1})
