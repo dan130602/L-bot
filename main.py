@@ -8,6 +8,7 @@ import json
 import tempfile
 from google.cloud import firestore
 from rapidfuzz import fuzz
+from collections import OrderedDict
 
 load_dotenv()
 
@@ -82,41 +83,42 @@ async def check_message(update: Update, context: CallbackContext):
                 set_once.add(count)
 
 gacha_collection = db.collection('gacha')
+GACHA_DOCUMENT_ID = "leaderboard"
 
 def increment_leaderboard(update):
-    user = update.message.from_user
-    user_id = str(user.id)
-    name = user.first_name
-    gacha_doc_ref = gacha_collection.document(user_id)
-    
-    @firestore.transactional
-    def update_in_transaction(transaction, doc_ref):
-        doc = doc_ref.get(transaction=transaction)
-        
-        if doc.exists:
-            # Increment the count
-            transaction.update(doc_ref, {"count": firestore.Increment(1)})
-            
-            # Check and update the name if it's different
-            if doc.get("name") != name:
-                transaction.update(doc_ref, {"name": name})
-        else:
-            # Create a new document if it doesn't exist
-            new_data = {"count": 1, "name": name}
-            transaction.set(doc_ref, new_data)
+    user_id = update.message.from_user.id
+    name = update.message.from_user.first_name
+    gacha_doc_ref = gacha_collection.document(GACHA_DOCUMENT_ID)
+    gacha_doc = gacha_doc_ref.get()
 
-    transaction = gacha_collection.client.transaction()
-    update_in_transaction(transaction, gacha_doc_ref)
+    if gacha_doc.exists:
+        gacha_data = gacha_doc.to_dict()
+        if user_id in gacha_data:
+            gacha_doc_ref.update({user_id.count: firestore.Increment(1)})
+            if gacha_data[user_id].name != name:
+                gacha_doc_ref.update({user_id.name: name})
+        else:
+            gacha_doc_ref.update({user_id.name: name, user_id.count: 1})
+
+def get_leaderboard():
+    gacha_doc_ref = gacha_collection.document(GACHA_DOCUMENT_ID)
+    gacha_doc = gacha_doc_ref.get()
+
+    if gacha_doc.exists:
+        gacha_dict = gacha_doc.to_dict()
+        sorted_gacha_items = sorted(gacha_dict.items(), key = lambda item: item[1]['count'], reverse = True)
+        sorted_gacha_dict = OrderedDict(sorted_gacha_items)
+
+        return sorted_gacha_dict
+    return {}
 
 async def fetch_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = gacha_collection.order_by("count", direction=firestore.Query.DESCENDING)
-    lb = query.stream()
+    lb = get_leaderboard()
 
     lb_msg = "--GACHA LEADERBOARD--\n\n"
     placing = 1
-    for user_id in lb:
-        user_dict = user_id.to_dict()
-        lb_msg += f"#{placing}. {user_dict.name}: {user_dict.count}"
+    for person in lb:
+        lb_msg += f"#{placing}. {person.name}: {person["count"]}"
         if placing == 1:
             lb_msg += " 🏆\n"
         else:
