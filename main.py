@@ -94,11 +94,11 @@ def increment_leaderboard(update):
     if gacha_doc.exists:
         gacha_data = gacha_doc.to_dict()
         if user_id in gacha_data:
-            gacha_doc_ref.update({f"{user_id}"["count"]: firestore.Increment(1)})
+            gacha_doc_ref.update({f"{user_id}.count": firestore.Increment(1)})
             if gacha_data[user_id].name != name:
-                gacha_doc_ref.update({f"{user_id}".name: name})
+                gacha_doc_ref.update({f"{user_id}.name": name})
         else:
-            gacha_doc_ref.update({f"{user_id}".name: name, f"{user_id}"["count"]: 1})
+            gacha_doc_ref.update({f"{user_id}.name": name, f"{user_id}.count": 1})
 
 def get_leaderboard():
     gacha_doc_ref = gacha_collection.document(GACHA_DOCUMENT_ID)
@@ -117,7 +117,7 @@ async def fetch_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(lb)
     lb_msg = "--GACHA LEADERBOARD--\n\n"
     placing = 1
-    for person in lb:
+    for person in lb.values():
         lb_msg += f"#{placing}. {person.name}: {person["count"]}"
         if placing == 1:
             lb_msg += " 🏆\n"
