@@ -128,7 +128,7 @@ async def fetch_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def roll_gacha(update, context):
     gacha = random.randint(1, 100)
-    if gacha >= 1:
+    if gacha == 1:
         chat_id = update.message.chat_id
         try:
             with open("lobsterThermidor.jpg", 'rb') as photo_file:
