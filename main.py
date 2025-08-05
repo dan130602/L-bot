@@ -85,33 +85,29 @@ gacha_collection = db.collection('gacha')
 GACHA_DOCUMENT_ID = "leaderboard"
 
 def increment_leaderboard(update):
-    gacha_doc_ref = gacha_collection.document(GACHA_DOCUMENT_ID)
+    user_id = update.message.from_user.id
+    name = update.message.from_user.first_name
+    gacha_doc_ref = gacha_collection.document(user_id)
     gacha_doc = gacha_doc_ref.get()
 
     if gacha_doc.exists:
-        name = update.message.from_user.first_name
-        gacha_data = gacha_doc.to_dict()
-        if name in gacha_data:
-            gacha_doc_ref.update({name: firestore.Increment(1)})
-        else:
-            gacha_doc_ref.update({name: 1})
-
-def get_leaderboard():
-    gacha_doc_ref = gacha_collection.document(GACHA_DOCUMENT_ID)
-    gacha_doc = gacha_doc_ref.get()
-
-    if gacha_doc.exists:
-        return gacha_doc.to_dict()
-    return {}
+        gacha_doc_ref.update({"count": firestore.Increment(1)})
+        gacha_user_dict = gacha_doc.to_dict()
+        if gacha_user_dict["name"] != name:
+            gacha_doc_ref.update({"name": name})
+    else:
+        new_data = {"count": 1, "name": name}
+        gacha_doc_ref.set(new_data)
 
 async def fetch_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lb = get_leaderboard()
-    if lb == {}:
-        await update.message.reply_text("Unable to fetch leaderboard. Try again later🦞")
+    query = gacha_collection.order_by("count", direction=firestore.Query.DESCENDING)
+    lb = query.stream()
+
     lb_msg = "--GACHA LEADERBOARD--\n\n"
     placing = 1
-    for name in lb:
-        lb_msg += f"#{placing}. {name}: {lb[name]}"
+    for user_id in lb:
+        user_dict = user_id.to_dict()
+        lb_msg += f"#{placing}. {user_dict.name}: {user_dict.count}"
         if placing == 1:
             lb_msg += " 🏆\n"
         else:
