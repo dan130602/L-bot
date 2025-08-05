@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.ext import CallbackContext
+from telegram.constants import ParseMode
 from dotenv import load_dotenv
 import os
 import random
@@ -62,16 +63,13 @@ async def fetch_current_count(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def check_message(update: Update, context: CallbackContext):
     message = update.message.text.lower()
-    hasGacha = False
     for word in message.split():
         if is_similar(word):
             increment_global_count()
             count = get_current_count()
             print(f"Count updated to: {count}")
 
-            if not hasGacha:
-                await roll_gacha(update, context)
-                hasGacha = True
+            await roll_gacha(update, context)
 
             if count % 1000 == 0 and count not in set_once:
                 chat_id = update.message.chat_id
@@ -111,16 +109,16 @@ async def fetch_leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lb = get_leaderboard()
     if lb == {}:
         await update.message.reply_text("Unable to fetch leaderboard. Try again later🦞")
-    lb_msg = "**--GACHA LEADERBOARD--**\n"
+    lb_msg = "*\\-\\-GACHA LEADERBOARD\\-\\-*\n"
     placing = 1
     for name in lb:
         lb_msg += f"#{placing}. {name}: {lb[name]}"
         if placing == 1:
-            lb_msg += "🏆\n"
+            lb_msg += " 🏆\n"
         else:
             lb_msg += "\n"
         placing += 1
-    await update.message.reply_text(lb_msg.rstrip())
+    await update.message.reply_text(lb_msg.rstrip(), parse_mode=ParseMode.MARKDOWN_V2)
 
 async def roll_gacha(update, context):
     gacha = random.randint(1, 100)
@@ -129,6 +127,7 @@ async def roll_gacha(update, context):
         try:
             with open("lobsterThermidor.jpg", 'rb') as photo_file:
                 await context.bot.send_photo(chat_id, photo_file)
+            increment_leaderboard(update)
         except Exception as e:
             print(e)
         
