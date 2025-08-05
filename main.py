@@ -86,7 +86,7 @@ gacha_collection = db.collection('gacha')
 GACHA_DOCUMENT_ID = "leaderboard"
 
 def increment_leaderboard(update):
-    user_id = update.message.from_user.id
+    user_id = str(update.message.from_user.id)
     name = update.message.from_user.first_name
     gacha_doc_ref = gacha_collection.document(GACHA_DOCUMENT_ID)
     gacha_doc = gacha_doc_ref.get()
